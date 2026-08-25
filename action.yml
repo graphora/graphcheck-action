@@ -1,5 +1,6 @@
 name: 'GraphCheck'
 description: 'Run GraphCheck checks against your graph and report results in the PR.'
+author: 'Graphora'
 
 inputs:
   profile:
@@ -33,9 +34,14 @@ inputs:
     required: false
     default: 'always'
   version:
-    description: 'Exact GraphCheck version to install (e.g. 0.1.0)'
+    description: 'Exact GraphCheck version to install; set empty to use a pre-installed CLI'
     required: false
-    default: '0.1.0'
+    default: '0.2.0'
+
+outputs:
+  exit-code:
+    description: 'Exact exit code returned by graphcheck run (0, 1, 2, or 3)'
+    value: ${{ steps.graphcheck_run.outputs.exit_code }}
 
 runs:
   using: 'composite'
@@ -122,6 +128,7 @@ runs:
         name: graphcheck-results
         path: |
           ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/results.json
+          ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/summary.json
           ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/report.html
         if-no-files-found: ignore
 
@@ -137,3 +144,7 @@ runs:
       if: always()
       shell: bash
       run: exit ${{ steps.graphcheck_run.outputs.exit_code || 3 }}
+
+branding:
+  icon: 'check-circle'
+  color: 'purple'

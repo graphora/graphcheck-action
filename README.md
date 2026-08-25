@@ -1,105 +1,91 @@
 # GraphCheck Action
 
-Run GraphCheck checks against your graph on every pull request, with
-inline error/warning annotations and a pass/fail summary in the checks tab.
-
-This is a thin wrapper around the GraphCheck CLI (graphcheck run) - it
-adds no new checking behaviour of its own.
-
-Not yet published to the GitHub Marketplace. Use the in-repo path shown
-below; switch to graphora/graphcheck-action@v1 once it is extracted and
-tagged.
+Run [GraphCheck](https://github.com/graphora/graphcheck) in GitHub Actions and keep the CLI's
+result as the workflow result. This Action is a thin wrapper around `graphcheck run`; it adds no
+checks or verdict logic of its own.
 
 ## Usage
 
-### Within this repository
+```yaml
+- uses: actions/checkout@v4
+- uses: graphora/graphcheck-action@v1
+  with:
+    profile: ci
+    uri: bolt://localhost:7687
+    user: neo4j
+    database: neo4j
+    upload-artifacts: always
+  env:
+    NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+```
 
-    - uses: ./.github/actions/graphcheck-action
-      with:
-        profile: ci
-        uri: bolt://localhost:7687
-        user: neo4j
-        database: neo4j
-        fail-fast: false
-        concurrency: 2
-        upload-artifacts: on-failure
-        version: 0.1.0
-      env:
-        NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+The Action installs the released `graphcheck==0.2.0` wheel by default. The pin makes otherwise
+identical workflow runs reproducible. To choose another release, override it with an exact version:
 
-### From another repository
+```yaml
+- uses: graphora/graphcheck-action@v1
+  with:
+    version: 0.2.0
+    uri: bolt://localhost:7687
+    user: neo4j
+```
 
-Not yet extracted to its own repo, so pin to a commit SHA on this one:
-
-    - uses: graphora/graphcheck/.github/actions/graphcheck-action@COMMIT_SHA
-      with:
-        profile: ci
-        uri: bolt://localhost:7687
-        user: neo4j
-        database: neo4j
-        fail-fast: false
-        concurrency: 2
-        upload-artifacts: on-failure
-        version: 0.1.0
-      env:
-        NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
-
-Switch to `graphora/graphcheck-action@v1` once this Action is extracted and tagged.
+Set `version: ''` only when an earlier step has installed the desired `graphcheck` CLI on `PATH`,
+for example when smoke-testing a source checkout.
 
 ## Inputs
 
 | Input | Required | Default | Description |
-|---|---|---|---|
-| profile | no | ci | Profile name to generate and use, if profiles.yml does not already exist |
-| uri | yes | - | Neo4j Bolt URI |
-| user | yes | - | Neo4j username |
-| database | no | neo4j | Neo4j database name |
-| fail-fast | no | false | Stop after the first error-severity failure |
-| suite | no | - | Suite name to run via --suite; skipped if empty |
-| concurrency | no | - | Maximum concurrent checks; empty uses `graphcheck.yml` |
-| upload-artifacts | no | always | `always`, `on-failure`, or `never` |
-| version | no | 0.1.0 | Exact GraphCheck version to install from PyPI |
+| --- | --- | --- | --- |
+| `profile` | no | `ci` | Profile to use, and to generate when `profiles.yml` does not exist |
+| `uri` | yes | - | Neo4j Bolt URI |
+| `user` | yes | - | Neo4j username |
+| `database` | no | `neo4j` | Neo4j database name |
+| `fail-fast` | no | `false` | Pass `--fail-fast` to `graphcheck run` |
+| `suite` | no | - | Pass `--suite <value>` when set |
+| `concurrency` | no | - | Pass `--concurrency <value>` when set |
+| `upload-artifacts` | no | `always` | Upload `always`, `on-failure`, or `never` |
+| `version` | no | `0.2.0` | Exact PyPI version; empty uses a pre-installed CLI |
 
-## What it does
+The generated profile refers to `password_env: NEO4J_PASSWORD`; it never writes the secret value.
+An existing `profiles.yml` is used unchanged.
 
-1. Installs the pinned GraphCheck wheel into an isolated Python 3.12 environment with `uv` and
-   reuses uv's GitHub Actions cache on later runs.
-2. Resolves the artifacts directory from graphcheck.yml (defaults to
-   .graphcheck if not configured or the file is absent).
-3. If profiles.yml does not already exist, generates one using the
-   uri/user/database inputs. Only password_env: NEO4J_PASSWORD is
-   written - the real password is never in the generated file.
-4. Runs graphcheck run using the given profile. The Neo4j password is
-   read from the NEO4J_PASSWORD environment variable at runtime - set
-   it via a repo secret, never a plaintext input.
-5. Removes the generated profiles.yml (only if this Action created it).
-6. Captures the run's exit code. The job's final status matches this
-   exit code exactly (0 green; 1/2/3 red) - this is preserved even
-   though later steps always run.
-7. Uploads results.json and the HTML report according to `upload-artifacts`. If an early failure
-   produced none, the summary says so explicitly.
-8. Emits one GitHub workflow annotation for each failed, warned, or errored check. Annotations
-   point to the check's YAML `id:` line when it can be resolved, include stable evidence element
-   identities, and otherwise remain check-level annotations. GitHub Actions accepts at most 10
-   error and 10 warning annotations per step; the Action reports exact dropped counts in its log
-   and Step Summary.
-9. Writes a pass/fail/errored/warn breakdown, read directly from
-   results.json (not inferred from the exit code), to the GitHub
-   Step Summary, including one evidence line per failing check.
+## CLI contract
 
-## Exit codes
+After setup, the Action constructs only the requested CLI flags and invokes:
+
+```console
+graphcheck run [--profile PROFILE] [--suite SUITE] [--fail-fast] [--concurrency N]
+```
+
+It captures that process code only long enough to upload/present the CLI outputs, then exits with
+the same code. The exact value is also available as the `exit-code` Action output:
 
 | Exit | Meaning |
-|---|---|
-| 0 | Run completed, all checks passed or were skipped |
-| 1 | A check failed, or an error-severity check errored |
-| 2 | Incomplete coverage, or a warning |
-| 3 | The run could not execute (bad config, no connection, setup failure) |
+| --- | --- |
+| `0` | All evaluated checks passed |
+| `1` | An error-severity check failed or errored |
+| `2` | Warning or incomplete evaluation |
+| `3` | The run could not prepare or execute |
 
-## Notes
+With the default `upload-artifacts: always`, the `graphcheck-results` workflow artifact contains
+the three files produced by the CLI:
 
-- This Action requires a graph reachable from the CI runner. Spinning
-  up a disposable Neo4j service for self-contained demo runs is not
-  yet supported.
-- Not yet released: graphcheck itself is not published to PyPI, so the
-  install step will fail until [Release] ships it.
+```text
+results.json
+summary.json
+report.html
+```
+
+`on-failure` uploads them only for a nonzero CLI result; `never` disables upload. Workflow
+annotations and the Step Summary are presentations of `results.json` and do not change GraphCheck
+verdicts or the final exit code.
+
+## Version tags
+
+Use `graphora/graphcheck-action@v1` to follow compatible v1 releases. For immutable pinning, use a
+full release tag such as `graphora/graphcheck-action@v1.0.0` or a commit SHA.
+
+## License
+
+Apache-2.0.
