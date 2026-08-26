@@ -44,6 +44,7 @@ for example when smoke-testing a source checkout.
 | `fail-fast` | no | `false` | Pass `--fail-fast` to `graphcheck run` |
 | `suite` | no | - | Pass `--suite <value>` when set |
 | `concurrency` | no | - | Maximum workers; empty uses `graphcheck.yml`, then 0.2.0 defaults to `1` |
+| `artifact-name` | no | `graphcheck-results` | Unique artifact name; suffix for matrices or repeated calls |
 | `upload-artifacts` | no | `always` | Upload `always`, `on-failure`, or `never` |
 | `version` | no | `0.2.0` | Exact PyPI version; empty uses a pre-installed CLI |
 
@@ -60,7 +61,9 @@ graphcheck run [--profile PROFILE] [--suite SUITE] [--fail-fast] [--concurrency 
 ```
 
 It captures that process code only long enough to upload/present the CLI outputs, then exits with
-the same code. The exact value is also available as the `exit-code` Action output:
+the same code. The exact value is also available as the `exit-code` Action output. Installation or
+preparation failures that happen before the CLI can run resolve to code `3` rather than an empty
+output:
 
 | Exit | Meaning |
 | --- | --- |
@@ -82,10 +85,22 @@ report.html
 annotations and the Step Summary are presentations of `results.json` and do not change GraphCheck
 verdicts or the final exit code.
 
+Artifact names must be unique across a workflow run. Include the matrix dimensions or environment
+when the Action can run more than once:
+
+```yaml
+- uses: graphora/graphcheck-action@v1
+  with:
+    artifact-name: graphcheck-results-${{ matrix.environment }}-${{ matrix.os }}
+    uri: ${{ matrix.uri }}
+    user: neo4j
+```
+
 ## Version tags
 
 Use `graphora/graphcheck-action@v1` to follow compatible v1 releases. For immutable pinning, use a
-full release tag such as `graphora/graphcheck-action@v1.0.0` or a commit SHA.
+full release tag such as `graphora/graphcheck-action@v1.0.1` or a commit SHA. Patch tags are never
+moved; the `v1` major tag advances only after the corresponding release contract passes.
 
 ## License
 

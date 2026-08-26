@@ -29,6 +29,10 @@ inputs:
     description: 'Maximum concurrent checks; empty uses graphcheck.yml, then 0.2.0 defaults to one'
     required: false
     default: ''
+  artifact-name:
+    description: 'Unique workflow artifact name; suffix it for matrices or repeated invocations'
+    required: false
+    default: 'graphcheck-results'
   upload-artifacts:
     description: 'Upload results always, only on failure, or never'
     required: false
@@ -41,14 +45,14 @@ inputs:
 outputs:
   exit-code:
     description: 'Exact exit code returned by graphcheck run (0, 1, 2, or 3)'
-    value: ${{ steps.graphcheck_run.outputs.exit_code }}
+    value: ${{ steps.final_status.outputs.exit_code }}
 
 runs:
   using: 'composite'
   steps:
     - name: Set up cached uv and Python
       if: inputs.version != ''
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
       with:
         python-version: '3.12'
         enable-cache: true
@@ -123,9 +127,9 @@ runs:
     - name: Upload results
       if: always() && inputs.upload-artifacts != 'never' && (inputs.upload-artifacts == 'always' || steps.graphcheck_run.outputs.exit_code != '0')
       continue-on-error: true
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
-        name: graphcheck-results
+        name: ${{ inputs.artifact-name }}
         path: |
           ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/results.json
           ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/summary.json
@@ -141,9 +145,12 @@ runs:
         GRAPHCHECK_ARTIFACTS_DIR: ${{ env.GRAPHCHECK_ARTIFACTS_DIR }}
 
     - name: Set final job status
+      id: final_status
       if: always()
       shell: bash
-      run: exit ${{ steps.graphcheck_run.outputs.exit_code || 3 }}
+      env:
+        GC_EXIT_CODE: ${{ steps.graphcheck_run.outputs.exit_code || 3 }}
+      run: echo "exit_code=$GC_EXIT_CODE" >> "$GITHUB_OUTPUT"; exit "$GC_EXIT_CODE"
 
 branding:
   icon: 'check-circle'

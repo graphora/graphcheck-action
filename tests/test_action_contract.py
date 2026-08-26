@@ -1,3 +1,4 @@
+import re
 import unittest
 from pathlib import Path
 
@@ -6,6 +7,7 @@ import yaml
 ROOT = Path(__file__).parents[1]
 ACTION_TEXT = (ROOT / "action.yml").read_text(encoding="utf-8")
 ACTION = yaml.safe_load(ACTION_TEXT)
+WORKFLOW_TEXT = (ROOT / ".github" / "workflows" / "contract.yml").read_text(encoding="utf-8")
 
 
 class ActionContractTests(unittest.TestCase):
@@ -24,18 +26,23 @@ class ActionContractTests(unittest.TestCase):
         self.assertIn("code=$?", run)
         self.assertIn('echo "exit_code=$code"', run)
         self.assertIn("exit 0", run)
+        final = self.step("Set final job status")
+        self.assertEqual(final["id"], "final_status")
         self.assertEqual(
-            self.step("Set final job status")["run"],
-            "exit ${{ steps.graphcheck_run.outputs.exit_code || 3 }}",
+            final["env"]["GC_EXIT_CODE"],
+            "${{ steps.graphcheck_run.outputs.exit_code || 3 }}",
         )
+        self.assertIn('echo "exit_code=$GC_EXIT_CODE"', final["run"])
+        self.assertIn('exit "$GC_EXIT_CODE"', final["run"])
         self.assertEqual(
             ACTION["outputs"]["exit-code"]["value"],
-            "${{ steps.graphcheck_run.outputs.exit_code }}",
+            "${{ steps.final_status.outputs.exit_code }}",
         )
 
     def test_upload_contains_all_cli_artifacts(self):
         upload = self.step("Upload results")
-        self.assertEqual(upload["uses"], "actions/upload-artifact@v4")
+        self.assertEqual(ACTION["inputs"]["artifact-name"]["default"], "graphcheck-results")
+        self.assertEqual(upload["with"]["name"], "${{ inputs.artifact-name }}")
         self.assertEqual(
             upload["with"]["path"].splitlines(),
             [
@@ -43,6 +50,14 @@ class ActionContractTests(unittest.TestCase):
                 "${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/summary.json",
                 "${{ env.GRAPHCHECK_ARTIFACTS_DIR }}/runs/latest/report.html",
             ],
+        )
+
+    def test_all_external_actions_are_pinned_to_full_commit_shas(self):
+        uses = re.findall(r"^\s*-?\s*uses:\s*([^\s#]+)", ACTION_TEXT + WORKFLOW_TEXT, re.MULTILINE)
+        self.assertTrue(uses)
+        self.assertTrue(
+            all(value == "./" or re.fullmatch(r"[^@]+@[0-9a-f]{40}", value) for value in uses),
+            uses,
         )
 
 

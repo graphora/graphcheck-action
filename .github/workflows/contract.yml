@@ -13,8 +13,8 @@ jobs:
   metadata:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
       - run: python -m pip install PyYAML==6.0.2
@@ -27,8 +27,8 @@ jobs:
       matrix:
         code: [0, 1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
       - run: python -m pip install PyYAML==6.0.2
@@ -50,7 +50,7 @@ jobs:
           upload-artifacts: never
         env:
           MOCK_EXIT_CODE: ${{ matrix.code }}
-      - name: Verify preserved exit code outcome
+      - name: Verify preserved exit code
         shell: bash
         env:
           ACTUAL: ${{ steps.graphcheck.outcome }}
@@ -59,11 +59,71 @@ jobs:
           EXPECTED_CODE: ${{ matrix.code }}
         run: test "$ACTUAL" = "$EXPECTED" && test "$ACTUAL_CODE" = "$EXPECTED_CODE"
 
+  pre-run-failure:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - failure: installation
+            version: 0.0.0-contract-missing
+            concurrency: ''
+          - failure: preparation
+            version: ''
+            concurrency: '0'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install PyYAML==6.0.2
+      - name: Trigger ${{ matrix.failure }} failure
+        id: graphcheck
+        continue-on-error: true
+        uses: ./
+        with:
+          uri: bolt://localhost:7687
+          user: neo4j
+          version: ${{ matrix.version }}
+          concurrency: ${{ matrix.concurrency }}
+          upload-artifacts: never
+      - name: Verify failure resolves to exit code 3
+        shell: bash
+        env:
+          ACTUAL: ${{ steps.graphcheck.outcome }}
+          ACTUAL_CODE: ${{ steps.graphcheck.outputs.exit-code }}
+        run: test "$ACTUAL" = failure && test "$ACTUAL_CODE" = 3
+
+  platform-install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install pinned CLI and invoke it
+        id: graphcheck
+        continue-on-error: true
+        uses: ./
+        with:
+          uri: bolt://127.0.0.1:1
+          user: neo4j
+          upload-artifacts: never
+        env:
+          NEO4J_PASSWORD: contract-test
+      - name: Verify platform path reaches the CLI
+        shell: bash
+        env:
+          ACTUAL: ${{ steps.graphcheck.outcome }}
+          ACTUAL_CODE: ${{ steps.graphcheck.outputs.exit-code }}
+        run: test "$ACTUAL" = failure && test "$ACTUAL_CODE" = 3
+
   artifacts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
       - run: python -m pip install PyYAML==6.0.2
@@ -74,13 +134,34 @@ jobs:
           printf '%s\n' '#!/usr/bin/env bash' 'mkdir -p .graphcheck/runs/latest' 'touch .graphcheck/runs/latest/results.json .graphcheck/runs/latest/summary.json .graphcheck/runs/latest/report.html' > "$RUNNER_TEMP/graphcheck-bin/graphcheck"
           chmod +x "$RUNNER_TEMP/graphcheck-bin/graphcheck"
           echo "$RUNNER_TEMP/graphcheck-bin" >> "$GITHUB_PATH"
-      - uses: ./
+      - name: First Action invocation
+        uses: ./
         with:
+          artifact-name: graphcheck-results-first
           uri: bolt://localhost:7687
           user: neo4j
           version: ''
-      - uses: actions/download-artifact@v4
+      - name: Second Action invocation
+        uses: ./
         with:
-          name: graphcheck-results
-          path: downloaded
-      - run: test -f downloaded/results.json && test -f downloaded/summary.json && test -f downloaded/report.html
+          artifact-name: graphcheck-results-second
+          uri: bolt://localhost:7687
+          user: neo4j
+          version: ''
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: graphcheck-results-first
+          path: downloaded/first
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: graphcheck-results-second
+          path: downloaded/second
+      - name: Verify both artifact triples
+        shell: bash
+        run: |
+          test -f downloaded/first/results.json
+          test -f downloaded/first/summary.json
+          test -f downloaded/first/report.html
+          test -f downloaded/second/results.json
+          test -f downloaded/second/summary.json
+          test -f downloaded/second/report.html
