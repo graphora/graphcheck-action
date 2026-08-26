@@ -165,3 +165,18 @@ jobs:
           test -f downloaded/second/results.json
           test -f downloaded/second/summary.json
           test -f downloaded/second/report.html
+
+  contract:
+    if: always()
+    needs: [metadata, exit-code, pre-run-failure, platform-install, artifacts]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every contract job
+        shell: bash
+        env:
+          ARTIFACTS: ${{ needs.artifacts.result }}
+          EXIT_CODE: ${{ needs.exit-code.result }}
+          METADATA: ${{ needs.metadata.result }}
+          PLATFORM_INSTALL: ${{ needs.platform-install.result }}
+          PRE_RUN_FAILURE: ${{ needs.pre-run-failure.result }}
+        run: test "$ARTIFACTS" = success && test "$EXIT_CODE" = success && test "$METADATA" = success && test "$PLATFORM_INSTALL" = success && test "$PRE_RUN_FAILURE" = success
