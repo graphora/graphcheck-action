@@ -14,6 +14,7 @@ class ActionContractTests(unittest.TestCase):
 
     def test_cli_release_is_pinned_and_overridable(self):
         self.assertEqual(ACTION["inputs"]["version"]["default"], "0.2.0")
+        self.assertIn("defaults to one", ACTION["inputs"]["concurrency"]["description"])
         self.assertIn("inputs.version != ''", ACTION_TEXT)
         self.assertIn('"graphcheck==$GC_VERSION"', ACTION_TEXT)
 
