@@ -82,8 +82,9 @@ report.html
 ```
 
 `on-failure` uploads them only for a nonzero CLI result; `never` disables upload. Workflow
-annotations and the Step Summary are presentations of `results.json` and do not change GraphCheck
-verdicts or the final exit code.
+annotations and the Step Summary present run/check information from `results.json`; the Step
+Summary reads canonical coverage status from `summary.json`. Neither presentation changes
+GraphCheck verdicts or the final exit code.
 
 Artifact names must be unique across a workflow run. Include the matrix dimensions or environment
 when the Action can run more than once:

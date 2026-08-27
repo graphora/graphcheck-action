@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.2",
+  "run": {"status": "complete", "exit_code": 2},
+  "score": {"value": 75},
+  "totals": {"checks": 4, "pass": 3, "skipped": 1},
+  "checks": []
+}

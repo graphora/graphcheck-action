@@ -1,0 +1,11 @@
+{
+  "schema_version": "2.0",
+  "run": {
+    "run_status": "complete",
+    "status": "failed",
+    "exit_code": 0
+  },
+  "score": {"value": 100},
+  "totals": {"checks": 1, "pass": 1},
+  "checks": []
+}
