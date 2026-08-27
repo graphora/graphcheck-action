@@ -1,11 +1,14 @@
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import write_summary
+ROOT = Path(__file__).parents[1]
+sys.path.insert(0, str(ROOT))
 
+import write_summary  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
