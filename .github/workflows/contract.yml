@@ -120,7 +120,16 @@ jobs:
         env:
           ACTUAL: ${{ steps.graphcheck.outcome }}
           ACTUAL_CODE: ${{ steps.graphcheck.outputs.exit-code }}
-        run: test "$ACTUAL" = failure && test "$ACTUAL_CODE" = 3
+        # An install failure also resolves to failure/3, so the outcome alone cannot
+        # prove the CLI ran on this platform. The pinned CLI landing on GITHUB_PATH
+        # and reporting its exact version is the proof that the install worked and
+        # the failure/3 came from the CLI's own connection preflight.
+        run: |
+          test "$ACTUAL" = failure
+          test "$ACTUAL_CODE" = 3
+          installed="$(graphcheck --version)"
+          echo "installed: $installed"
+          test "$installed" = "graphcheck 0.2.0"  # keep in lockstep with action.yml's version default
 
   artifacts:
     runs-on: ubuntu-latest
