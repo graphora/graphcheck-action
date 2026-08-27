@@ -8,6 +8,7 @@ ROOT = Path(__file__).parents[1]
 ACTION_TEXT = (ROOT / "action.yml").read_text(encoding="utf-8")
 ACTION = yaml.safe_load(ACTION_TEXT)
 WORKFLOW_TEXT = (ROOT / ".github" / "workflows" / "contract.yml").read_text(encoding="utf-8")
+WORKFLOW = yaml.safe_load(WORKFLOW_TEXT)
 
 
 class ActionContractTests(unittest.TestCase):
@@ -59,6 +60,14 @@ class ActionContractTests(unittest.TestCase):
             all(value == "./" or re.fullmatch(r"[^@]+@[0-9a-f]{40}", value) for value in uses),
             uses,
         )
+
+    def test_platform_install_proves_the_pinned_cli_is_on_path(self):
+        steps = WORKFLOW["jobs"]["platform-install"]["steps"]
+        names = [step.get("name") for step in steps]
+        self.assertLess(names.index("Install pinned CLI and invoke it"), names.index("Verify pinned CLI installation"))
+        self.assertLess(names.index("Verify pinned CLI installation"), names.index("Verify platform path reaches the CLI"))
+        version_step = steps[names.index("Verify pinned CLI installation")]
+        self.assertEqual(version_step["run"], 'test "$(graphcheck --version)" = "graphcheck 0.2.0"')
 
 
 if __name__ == "__main__":

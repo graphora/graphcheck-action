@@ -112,6 +112,9 @@ jobs:
           upload-artifacts: never
         env:
           NEO4J_PASSWORD: contract-test
+      - name: Verify pinned CLI installation
+        shell: bash
+        run: test "$(graphcheck --version)" = "graphcheck 0.2.0"
       - name: Verify platform path reaches the CLI
         shell: bash
         env:
