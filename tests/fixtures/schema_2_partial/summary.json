@@ -1,0 +1,7 @@
+{
+  "schema_version": "2.0",
+  "id": "run_generated_only",
+  "finished_at": "2026-07-06T09:02:41Z",
+  "coverage_status": "partial",
+  "suite_scores": [{"id": "customer-360", "score": null}]
+}

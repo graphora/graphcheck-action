@@ -19,6 +19,7 @@ FINDING_VERDICTS = {"fail", "warn", "errored"}
 def main() -> None:
     artifacts = os.environ.get("GRAPHCHECK_ARTIFACTS_DIR", ".graphcheck")
     results_path = Path(artifacts) / "runs" / "latest" / "results.json"
+    coverage_summary_path = Path(artifacts) / "runs" / "latest" / "summary.json"
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     try:
         data = json.loads(results_path.read_text(encoding="utf-8"))
@@ -38,7 +39,18 @@ def main() -> None:
     }
     locations = _discover_check_locations(_workspace(), wanted_locations)
     annotation_counts = _emit_annotations(checks, locations)
-    _write_if_configured(summary_path, _summary_lines(data, annotation_counts))
+    coverage_summary = _read_optional_json_mapping(coverage_summary_path)
+    _write_if_configured(
+        summary_path, _summary_lines(data, coverage_summary, annotation_counts)
+    )
+
+
+def _read_optional_json_mapping(path: Path) -> Mapping[str, object]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return value if isinstance(value, Mapping) else {}
 
 
 def _emit_annotations(
@@ -250,15 +262,24 @@ def _command_property(value: str) -> str:
     return _command_value(value).replace(":", "%3A").replace(",", "%2C")
 
 
-def _summary_lines(data: Mapping[str, object], counts: Mapping[str, Counter[str]]) -> list[str]:
+def _summary_lines(
+    data: Mapping[str, object],
+    coverage_summary: Mapping[str, object],
+    counts: Mapping[str, Counter[str]],
+) -> list[str]:
     totals = data.get("totals", {}) if isinstance(data.get("totals"), Mapping) else {}
     suites = data.get("suites", []) if isinstance(data.get("suites"), list) else []
     checks = data.get("checks", []) if isinstance(data.get("checks"), list) else []
     run = data.get("run", {}) if isinstance(data.get("run"), Mapping) else {}
     score = data.get("score") if isinstance(data.get("score"), Mapping) else {}
+    run_status = run.get("run_status", run.get("status", "unknown"))
+    coverage_status = coverage_summary.get(
+        "coverage_status", coverage_summary.get("status", "unknown")
+    )
     lines = [
         "## GraphCheck results\n",
-        f"**Run status:** `{run.get('status', 'unknown')}` &nbsp;|&nbsp; "
+        f"**Run status:** `{run_status}` &nbsp;|&nbsp; "
+        f"**Coverage status:** `{coverage_status}` &nbsp;|&nbsp; "
         f"**Exit code:** `{run.get('exit_code', 'unknown')}` &nbsp;|&nbsp; "
         f"**Score:** {score.get('value', 'n/a')}\n",
         f"**Totals:** {totals.get('checks', 0)} checks &mdash; {totals.get('pass', 0)} "

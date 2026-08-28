@@ -1,0 +1,26 @@
+{
+  "schema_version": "2.0",
+  "run": {
+    "id": "run_empty_complete",
+    "started_at": "2026-07-06T09:00:00Z",
+    "finished_at": "2026-07-06T09:00:01Z",
+    "graphcheck_version": "0.2.0",
+    "pack_version": "0.1.0",
+    "run_status": "complete",
+    "partial_reason": null,
+    "exit_code": 2,
+    "selection": {"suites": [], "tags": [], "fail_fast": false},
+    "redaction": {"policy": "none", "applied": false},
+    "target": {
+      "database": "neo4j", "server_version": "5.18.0", "edition": "community",
+      "fingerprint": "sha256:empty123",
+      "capabilities": {"apoc": false, "count_store": true},
+      "nodes": 0, "relationships": 0, "labels": [], "relationship_types": []
+    },
+    "error": null
+  },
+  "score": null,
+  "totals": {"checks": 0, "pass": 0, "fail": 0, "warn": 0, "errored": 0, "skipped": 0},
+  "suites": [],
+  "checks": []
+}
