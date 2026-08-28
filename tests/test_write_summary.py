@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import tempfile
@@ -14,6 +15,13 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 class WriteSummaryStatusTests(unittest.TestCase):
+    def load_fixture_pair(self, name: str) -> tuple[dict, dict]:
+        fixture = FIXTURES / name
+        return (
+            json.loads((fixture / "results.json").read_text(encoding="utf-8")),
+            json.loads((fixture / "summary.json").read_text(encoding="utf-8")),
+        )
+
     def render_fixture(self, name: str, include_summary: bool = True) -> str:
         fixture = FIXTURES / name
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -33,14 +41,23 @@ class WriteSummaryStatusTests(unittest.TestCase):
             return step_summary.read_text(encoding="utf-8")
 
     def test_schema_2_uses_run_status_and_canonical_coverage_status(self):
+        results, summary = self.load_fixture_pair("schema_2_complete")
         rendered = self.render_fixture("schema_2_complete")
 
+        self.assertEqual(results["schema_version"], "2.0")
+        self.assertNotIn("status", results["run"])
+        self.assertEqual(summary["schema_version"], "2.0")
+        self.assertNotIn("status", summary)
         self.assertIn("**Run status:** `complete`", rendered)
         self.assertIn("**Coverage status:** `complete`", rendered)
 
     def test_schema_1_2_falls_back_to_run_status(self):
+        results, summary = self.load_fixture_pair("schema_1_2_complete")
         rendered = self.render_fixture("schema_1_2_complete")
 
+        self.assertEqual(results["schema_version"], "1.2")
+        self.assertNotIn("run_status", results["run"])
+        self.assertEqual(summary["schema_version"], "1.0")
         self.assertIn("**Run status:** `complete`", rendered)
 
     def test_schema_2_keeps_different_run_and_coverage_statuses(self):
