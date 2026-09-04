@@ -26,7 +26,7 @@ inputs:
     required: false
     default: ''
   concurrency:
-    description: 'Maximum concurrent checks; empty uses graphcheck.yml, then 0.2.0 defaults to one'
+    description: 'Maximum concurrent checks; empty uses graphcheck.yml, then 0.3.0 defaults to two'
     required: false
     default: ''
   artifact-name:
@@ -40,7 +40,7 @@ inputs:
   version:
     description: 'Exact GraphCheck version to install; set empty to use a pre-installed CLI'
     required: false
-    default: '0.2.0'
+    default: '0.3.0'
 
 outputs:
   exit-code:
