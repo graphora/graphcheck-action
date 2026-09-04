@@ -19,13 +19,13 @@ checks or verdict logic of its own.
     NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
 ```
 
-The Action installs the released `graphcheck==0.2.0` wheel by default. The pin makes otherwise
+The Action installs the released `graphcheck==0.3.0` wheel by default. The pin makes otherwise
 identical workflow runs reproducible. To choose another release, override it with an exact version:
 
 ```yaml
 - uses: graphora/graphcheck-action@v1
   with:
-    version: 0.2.0
+    version: 0.3.0
     uri: bolt://localhost:7687
     user: neo4j
 ```
@@ -43,14 +43,14 @@ for example when smoke-testing a source checkout.
 | `database` | no | `neo4j` | Neo4j database name |
 | `fail-fast` | no | `false` | Pass `--fail-fast` to `graphcheck run` |
 | `suite` | no | - | Pass `--suite <value>` when set |
-| `concurrency` | no | - | Maximum workers; empty uses `graphcheck.yml`, then 0.2.0 defaults to `1` |
+| `concurrency` | no | - | Maximum workers; empty uses `graphcheck.yml`, then 0.3.0 defaults to `2` |
 | `artifact-name` | no | `graphcheck-results` | Unique artifact name; suffix for matrices or repeated calls |
 | `upload-artifacts` | no | `always` | Upload `always`, `on-failure`, or `never` |
-| `version` | no | `0.2.0` | Exact PyPI version; empty uses a pre-installed CLI |
+| `version` | no | `0.3.0` | Exact PyPI version; empty uses a pre-installed CLI |
 
 The generated profile refers to `password_env: NEO4J_PASSWORD`; it never writes the secret value.
-An existing `profiles.yml` is used unchanged. With the pinned GraphCheck 0.2.0 release, omitting
-`concurrency` runs one check at a time unless `graphcheck.yml` explicitly chooses another limit.
+An existing `profiles.yml` is used unchanged. With the pinned GraphCheck 0.3.0 release, omitting
+`concurrency` runs two checks at a time unless `graphcheck.yml` explicitly chooses another limit.
 
 ## CLI contract
 
