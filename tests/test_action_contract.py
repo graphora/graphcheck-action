@@ -16,8 +16,8 @@ class ActionContractTests(unittest.TestCase):
         return next(step for step in ACTION["runs"]["steps"] if step.get("name") == name)
 
     def test_cli_release_is_pinned_and_overridable(self):
-        self.assertEqual(ACTION["inputs"]["version"]["default"], "0.2.0")
-        self.assertIn("defaults to one", ACTION["inputs"]["concurrency"]["description"])
+        self.assertEqual(ACTION["inputs"]["version"]["default"], "0.3.0")
+        self.assertIn("defaults to two", ACTION["inputs"]["concurrency"]["description"])
         self.assertIn("inputs.version != ''", ACTION_TEXT)
         self.assertIn('"graphcheck==$GC_VERSION"', ACTION_TEXT)
 
@@ -67,7 +67,7 @@ class ActionContractTests(unittest.TestCase):
         self.assertLess(names.index("Install pinned CLI and invoke it"), names.index("Verify pinned CLI installation"))
         self.assertLess(names.index("Verify pinned CLI installation"), names.index("Verify platform path reaches the CLI"))
         version_step = steps[names.index("Verify pinned CLI installation")]
-        self.assertEqual(version_step["run"], 'test "$(graphcheck --version)" = "graphcheck 0.2.0"')
+        self.assertEqual(version_step["run"], 'test "$(graphcheck --version)" = "graphcheck 0.3.0"')
 
 
 if __name__ == "__main__":

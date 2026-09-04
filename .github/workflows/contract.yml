@@ -114,7 +114,7 @@ jobs:
           NEO4J_PASSWORD: contract-test
       - name: Verify pinned CLI installation
         shell: bash
-        run: test "$(graphcheck --version)" = "graphcheck 0.2.0"
+        run: test "$(graphcheck --version)" = "graphcheck 0.3.0"
       - name: Verify platform path reaches the CLI
         shell: bash
         env:
@@ -129,7 +129,7 @@ jobs:
           test "$ACTUAL_CODE" = 3
           installed="$(graphcheck --version)"
           echo "installed: $installed"
-          test "$installed" = "graphcheck 0.2.0"  # keep in lockstep with action.yml's version default
+          test "$installed" = "graphcheck 0.3.0"  # keep in lockstep with action.yml's version default
 
   artifacts:
     runs-on: ubuntu-latest
