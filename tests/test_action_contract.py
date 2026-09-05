@@ -7,6 +7,7 @@ import yaml
 ROOT = Path(__file__).parents[1]
 ACTION_TEXT = (ROOT / "action.yml").read_text(encoding="utf-8")
 ACTION = yaml.safe_load(ACTION_TEXT)
+README_TEXT = (ROOT / "README.md").read_text(encoding="utf-8")
 WORKFLOW_TEXT = (ROOT / ".github" / "workflows" / "contract.yml").read_text(encoding="utf-8")
 WORKFLOW = yaml.safe_load(WORKFLOW_TEXT)
 
@@ -20,6 +21,18 @@ class ActionContractTests(unittest.TestCase):
         self.assertIn("defaults to two", ACTION["inputs"]["concurrency"]["description"])
         self.assertIn("inputs.version != ''", ACTION_TEXT)
         self.assertIn('"graphcheck==$GC_VERSION"', ACTION_TEXT)
+
+    def test_readme_defaults_match_action_metadata(self):
+        version = ACTION["inputs"]["version"]["default"]
+        workers = re.search(r"defaults to (\w+)$", ACTION["inputs"]["concurrency"]["description"])
+        self.assertIsNotNone(workers)
+        worker_word = workers.group(1)
+        worker_number = {"one": "1", "two": "2"}[worker_word]
+        self.assertIn(f"`graphcheck=={version}` wheel by default", README_TEXT)
+        self.assertRegex(README_TEXT, rf"(?m)^\| `version`\s+\| no\s+\| `{re.escape(version)}`\s+\|")
+        self.assertIn(f"then {version} defaults to `{worker_number}`", README_TEXT)
+        self.assertIn(f"With the pinned GraphCheck {version} release", README_TEXT)
+        self.assertIn(f"runs up to {worker_word} checks concurrently", README_TEXT)
 
     def test_wrapper_invokes_only_graphcheck_run_and_restores_its_exit_code(self):
         run = self.step("Run GraphCheck")["run"]

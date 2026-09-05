@@ -35,22 +35,23 @@ for example when smoke-testing a source checkout.
 
 ## Inputs
 
-| Input | Required | Default | Description |
-| --- | --- | --- | --- |
-| `profile` | no | `ci` | Profile to use, and to generate when `profiles.yml` does not exist |
-| `uri` | yes | - | Neo4j Bolt URI |
-| `user` | yes | - | Neo4j username |
-| `database` | no | `neo4j` | Neo4j database name |
-| `fail-fast` | no | `false` | Pass `--fail-fast` to `graphcheck run` |
-| `suite` | no | - | Pass `--suite <value>` when set |
-| `concurrency` | no | - | Maximum workers; empty uses `graphcheck.yml`, then 0.3.0 defaults to `2` |
-| `artifact-name` | no | `graphcheck-results` | Unique artifact name; suffix for matrices or repeated calls |
-| `upload-artifacts` | no | `always` | Upload `always`, `on-failure`, or `never` |
-| `version` | no | `0.3.0` | Exact PyPI version; empty uses a pre-installed CLI |
+| Input              | Required | Default              | Description                                                              |
+| ------------------ | -------- | -------------------- | ------------------------------------------------------------------------ |
+| `profile`          | no       | `ci`                 | Profile to use, and to generate when `profiles.yml` does not exist       |
+| `uri`              | yes      | -                    | Neo4j Bolt URI                                                           |
+| `user`             | yes      | -                    | Neo4j username                                                           |
+| `database`         | no       | `neo4j`              | Neo4j database name                                                      |
+| `fail-fast`        | no       | `false`              | Pass `--fail-fast` to `graphcheck run`                                   |
+| `suite`            | no       | -                    | Pass `--suite <value>` when set                                          |
+| `concurrency`      | no       | -                    | Maximum workers; empty uses `graphcheck.yml`, then 0.3.0 defaults to `2` |
+| `artifact-name`    | no       | `graphcheck-results` | Unique artifact name; suffix for matrices or repeated calls              |
+| `upload-artifacts` | no       | `always`             | Upload `always`, `on-failure`, or `never`                                |
+| `version`          | no       | `0.3.0`              | Exact PyPI version; empty uses a pre-installed CLI                       |
 
 The generated profile refers to `password_env: NEO4J_PASSWORD`; it never writes the secret value.
 An existing `profiles.yml` is used unchanged. With the pinned GraphCheck 0.3.0 release, omitting
-`concurrency` runs two checks at a time unless `graphcheck.yml` explicitly chooses another limit.
+`concurrency` runs up to two checks concurrently unless `graphcheck.yml` explicitly chooses
+another limit.
 
 ## CLI contract
 
@@ -60,17 +61,17 @@ After setup, the Action constructs only the requested CLI flags and invokes:
 graphcheck run [--profile PROFILE] [--suite SUITE] [--fail-fast] [--concurrency N]
 ```
 
-It captures that process code only long enough to upload/present the CLI outputs, then exits with
-the same code. The exact value is also available as the `exit-code` Action output. Installation or
-preparation failures that happen before the CLI can run resolve to code `3` rather than an empty
-output:
+It captures that process code only long enough to upload and present the CLI outputs, then exits
+with the same code. The exact value is also available as the `exit-code` Action output.
+Installation or preparation failures that happen before the CLI can run resolve to code `3`
+rather than an empty output:
 
-| Exit | Meaning |
-| --- | --- |
-| `0` | All evaluated checks passed |
-| `1` | An error-severity check failed or errored |
-| `2` | Warning or incomplete evaluation |
-| `3` | The run could not prepare or execute |
+| Exit | Meaning                                   |
+| ---- | ----------------------------------------- |
+| `0`  | All evaluated checks passed               |
+| `1`  | An error-severity check failed or errored |
+| `2`  | Warning or incomplete evaluation          |
+| `3`  | The run could not prepare or execute      |
 
 With the default `upload-artifacts: always`, the `graphcheck-results` workflow artifact contains
 the three files produced by the CLI:
@@ -81,10 +82,20 @@ summary.json
 report.html
 ```
 
-`on-failure` uploads them only for a nonzero CLI result; `never` disables upload. Workflow
-annotations and the Step Summary present run/check information from `results.json`; the Step
-Summary reads canonical coverage status from `summary.json`. Neither presentation changes
-GraphCheck verdicts or the final exit code.
+`on-failure` uploads them only for a nonzero CLI result; `never` disables upload.
+
+Workflow annotations are emitted for failed, errored, and warning-severity checks. Repository
+source locations are attached when available, and annotations are bounded to avoid exceeding
+GitHub's per-run limits. If any annotations are omitted because the limit was reached, the Step
+Summary reports the number dropped.
+
+The Step Summary presents run status separately from coverage status. GraphCheck 0.3.0 writes the
+schema 2.0 fields `run.run_status` in `results.json` and `coverage_status` in `summary.json`.
+Action v1.0.2 and newer also retain compatibility with historical artifacts that use `run.status`
+and summary `status`.
+
+Annotations, artifact uploads, and the Step Summary do not change GraphCheck verdicts or the final
+exit code.
 
 Artifact names must be unique across a workflow run. Include the matrix dimensions or environment
 when the Action can run more than once:
@@ -99,9 +110,12 @@ when the Action can run more than once:
 
 ## Version tags
 
-Use `graphora/graphcheck-action@v1` to follow compatible v1 releases. For immutable pinning, use a
-full release tag such as `graphora/graphcheck-action@v1.0.1` or a commit SHA. Patch tags are never
-moved; the `v1` major tag advances only after the corresponding release contract passes.
+Use `graphora/graphcheck-action@v1` to follow compatible v1 releases. GraphCheck 0.3.0 and its
+results schema 2.0 require Action v1.0.2 or newer.
+
+For immutable pinning, use a full release tag such as
+`graphora/graphcheck-action@v1.0.2` or a commit SHA. Patch tags are never moved; the `v1` major tag
+advances only after the corresponding release contract passes.
 
 ## License
 
