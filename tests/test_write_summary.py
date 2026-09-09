@@ -78,5 +78,86 @@ class WriteSummaryStatusTests(unittest.TestCase):
         self.assertIn("**Coverage status:** `unknown`", rendered)
 
 
+    def test_cli_produced_changes_render_in_step_summary(self):
+        rendered = self.render_fixture("schema_2_changes")
+
+        self.assertIn("### What changed", rendered)
+        self.assertIn("**New failures (1):**", rendered)
+        self.assertIn("customer-360::account-no-orphans</code>: pass → fail", rendered)
+        self.assertIn("**Fixed checks (1):**", rendered)
+        self.assertIn(
+            "customer-360::customer-tax-id-fixed</code>: fail → pass", rendered
+        )
+        self.assertIn("| Nodes | 1,250 | 1,251 | +1 |", rendered)
+        self.assertIn("| Relationships | 3,480 | 3,478 | -2 |", rendered)
+        self.assertEqual(rendered, self.render_fixture("schema_2_changes"))
+
+    def test_old_artifacts_and_missing_summaries_silently_omit_changes(self):
+        for fixture, include in (
+            ("schema_1_2_complete", True),
+            ("schema_2_complete", True),
+            ("schema_2_complete", False),
+        ):
+            with self.subTest(fixture=fixture, include_summary=include):
+                rendered = self.render_fixture(fixture, include_summary=include)
+                self.assertNotIn("What changed", rendered)
+                self.assertNotIn("changes unavailable", rendered.lower())
+
+    def test_changes_are_bounded_and_report_omitted_checks(self):
+        _, summary = self.load_fixture_pair("schema_2_changes")
+        summary["changes"]["new_failures"] *= 25
+        summary["changes"]["dropped"]["new_failures"] = 3
+        rendered = "\n".join(write_summary._changes_lines(summary))
+
+        self.assertIn("**New failures (28):**", rendered)
+        self.assertEqual(rendered.count("account-no-orphans"), 20)
+        self.assertIn("8 more checks omitted.", rendered)
+
+    def test_empty_changes_and_unknown_counts_render_without_errors(self):
+        _, summary = self.load_fixture_pair("schema_2_changes")
+        summary["changes"].update(new_failures=[], fixed_checks=[], count_deltas={})
+        rendered = "\n".join(write_summary._changes_lines(summary))
+
+        self.assertIn("**New failures (0):**", rendered)
+        self.assertIn("**Fixed checks (0):**", rendered)
+        self.assertIn("Count deltas unavailable.", rendered)
+
+    def test_change_identifiers_cannot_inject_summary_markup(self):
+        _, summary = self.load_fixture_pair("schema_2_changes")
+        summary["changes"]["previous_run_id"] = '<script>alert("x")</script>'
+        summary["changes"]["new_failures"][0]["check_id"] = (
+            "`\n### Injected <img src=x>" + "x" * 1000
+        )
+        rendered = "\n".join(write_summary._changes_lines(summary))
+
+        self.assertNotIn("<script>", rendered)
+        self.assertNotIn("<img", rendered)
+        self.assertNotIn("\n### Injected", rendered)
+        self.assertIn("&lt;script&gt;", rendered)
+        self.assertIn("&#96;", rendered)
+        self.assertLess(len(rendered), 1500)
+
+    def test_malformed_optional_block_silently_falls_back(self):
+        for changes in (
+            None,
+            [],
+            "bad",
+            {},
+            {"previous_run_id": "before", "count_deltas": {}, "new_failures": "bad"},
+        ):
+            with self.subTest(changes=changes):
+                self.assertEqual(write_summary._changes_lines({"changes": changes}), [])
+
+    def test_malformed_count_or_check_silently_falls_back(self):
+        for field, value in (("delta", True), ("delta", 99), ("before", "1250")):
+            _, summary = self.load_fixture_pair("schema_2_changes")
+            summary["changes"]["count_deltas"]["nodes"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assertEqual(write_summary._changes_lines(summary), [])
+        _, summary = self.load_fixture_pair("schema_2_changes")
+        summary["changes"]["fixed_checks"] = [None]
+        self.assertEqual(write_summary._changes_lines(summary), [])
+
+
 if __name__ == "__main__":
     unittest.main()

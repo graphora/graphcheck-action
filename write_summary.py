@@ -7,6 +7,7 @@ import json
 import os
 from collections import Counter
 from collections.abc import Mapping
+from html import escape
 from pathlib import Path
 
 import yaml
@@ -14,6 +15,7 @@ from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 ANNOTATION_LIMITS = {"error": 10, "warning": 10}
 FINDING_VERDICTS = {"fail", "warn", "errored"}
+CHANGES_CHECK_LIMIT = 20
 
 
 def main() -> None:
@@ -306,6 +308,7 @@ def _summary_lines(
                 f"{suite_totals.get('skipped', 0)} |"
             )
         lines.append("")
+    lines.extend(_changes_lines(coverage_summary))
     findings = [
         check
         for check in checks
@@ -334,6 +337,84 @@ def _summary_lines(
     if dropped.total():
         lines.append(f"> {_truncation_message(counts['emitted'], dropped)}\n")
     return lines
+
+
+def _changes_lines(summary: Mapping[str, object]) -> list[str]:
+    changes = summary.get("changes")
+    if not isinstance(changes, Mapping):
+        return []
+    previous = changes.get("previous_run_id")
+    counts, dropped = changes.get("count_deltas"), changes.get("dropped", {})
+    if (
+        not isinstance(previous, str)
+        or not previous
+        or not isinstance(counts, Mapping)
+        or not isinstance(dropped, Mapping)
+    ):
+        return []
+    lines = ["### What changed\n", f"Compared with {_summary_code(previous)}.\n"]
+    for key, label in (
+        ("new_failures", "New failures"),
+        ("fixed_checks", "Fixed checks"),
+    ):
+        entries = changes.get(key)
+        omitted = dropped.get(key, 0)
+        if not isinstance(entries, list) or type(omitted) is not int or omitted < 0:
+            return []
+        lines.append(f"**{label} ({len(entries) + omitted}):**\n")
+        for entry in entries[:CHANGES_CHECK_LIMIT]:
+            if not isinstance(entry, Mapping) or not all(
+                isinstance(entry.get(field), str) for field in ("suite_id", "check_id")
+            ):
+                return []
+            before, after = entry.get("before"), entry.get("after")
+            if before not in (
+                None,
+                "pass",
+                "warn",
+                "fail",
+                "errored",
+                "skipped",
+            ) or after not in ("pass", "warn", "fail", "errored", "skipped"):
+                return []
+            identity = f"{entry['suite_id']}::{entry['check_id']}"
+            lines.append(f"- {_summary_code(identity)}: {before or 'added'} → {after}")
+        if not entries and not omitted:
+            lines.append("- None.")
+        omitted += max(0, len(entries) - CHANGES_CHECK_LIMIT)
+        if omitted:
+            lines.append(f"- {omitted} more checks omitted.")
+        lines.append("")
+    rows = []
+    for key, label in (("nodes", "Nodes"), ("relationships", "Relationships")):
+        count = counts.get(key)
+        if count is None:
+            continue
+        if not isinstance(count, Mapping) or not all(
+            type(count.get(field)) is int for field in ("before", "after", "delta")
+        ):
+            return []
+        old, new, delta = count["before"], count["after"], count["delta"]
+        if old < 0 or new < 0 or delta != new - old:
+            return []
+        rows.append(f"| {label} | {old:,} | {new:,} | {delta:+,} |")
+    if rows:
+        lines.extend(
+            [
+                "| Count | Previous | Current | Delta |",
+                "|---|---:|---:|---:|",
+                *rows,
+                "",
+            ]
+        )
+    else:
+        lines.append("Count deltas unavailable.\n")
+    return lines
+
+
+def _summary_code(value: str) -> str:
+    text = escape(_clip(" ".join(value.split()), 300)).replace("`", "&#96;")
+    return f"<code>{text}</code>"
 
 
 def _truncation_message(emitted: Counter[str], dropped: Counter[str]) -> str:

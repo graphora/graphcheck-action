@@ -1,0 +1,140 @@
+{
+  "checks": [
+    {
+      "compiled_query": "MATCH (c:Customer) RETURN count(c) AS total, count(c.tax_id) AS present",
+      "duration_ms": 61,
+      "error": null,
+      "estimate": false,
+      "evidence": {
+        "cap": 100,
+        "elements": [
+          {
+            "id": "account-no-orphans",
+            "kind": "node",
+            "labels": null,
+            "type": null
+          }
+        ],
+        "message": "finding",
+        "total_count": 1,
+        "truncated": false
+      },
+      "expected": {
+        "threshold": 1.0
+      },
+      "id": "account-no-orphans",
+      "measured": {
+        "coverage": 1.0
+      },
+      "name": "account-no-orphans",
+      "params": {},
+      "pattern": "conformance",
+      "provenance": null,
+      "severity": "error",
+      "skip_reason": null,
+      "started_at": "2026-07-06T09:01:13Z",
+      "suite_id": "customer-360",
+      "verdict": "fail"
+    },
+    {
+      "compiled_query": "MATCH (c:Customer) RETURN count(c) AS total, count(c.tax_id) AS present",
+      "duration_ms": 61,
+      "error": null,
+      "estimate": false,
+      "evidence": null,
+      "expected": {
+        "threshold": 1.0
+      },
+      "id": "customer-tax-id-fixed",
+      "measured": {
+        "coverage": 1.0
+      },
+      "name": "customer-tax-id-fixed",
+      "params": {},
+      "pattern": "conformance",
+      "provenance": null,
+      "severity": "error",
+      "skip_reason": null,
+      "started_at": "2026-07-06T09:01:13Z",
+      "suite_id": "customer-360",
+      "verdict": "pass"
+    }
+  ],
+  "run": {
+    "baseline_ref": null,
+    "config_hash": null,
+    "error": null,
+    "exit_code": 1,
+    "finished_at": "2026-09-02T00:00:00Z",
+    "graphcheck_version": "0.1.0",
+    "id": "neo4j_20260902T000000000000Z_32f3a78d401f88741d82ce04e1097010",
+    "pack_version": "0.1.0",
+    "partial_reason": null,
+    "previous_run_id": "neo4j_20260901T000000000000Z_487f5709245effcd7237c32745230075",
+    "redaction": {
+      "applied": false,
+      "policy": "none"
+    },
+    "run_status": "complete",
+    "selection": {
+      "fail_fast": false,
+      "suites": [
+        "customer-360"
+      ],
+      "tags": []
+    },
+    "started_at": "2026-09-02T00:00:00Z",
+    "target": {
+      "capabilities": {
+        "apoc": true,
+        "count_store": true
+      },
+      "database": "neo4j",
+      "edition": "community",
+      "fingerprint": "sha256:abc123",
+      "labels": [
+        "Account",
+        "Customer"
+      ],
+      "nodes": 1251,
+      "relationship_types": [
+        "CONTROLS",
+        "OWNS"
+      ],
+      "relationships": 3478,
+      "server_version": "5.18.0"
+    }
+  },
+  "schema_version": "2.0",
+  "score": {
+    "method": "weighted-by-severity",
+    "value": 50,
+    "weights": {
+      "error": 3,
+      "warn": 1
+    }
+  },
+  "suites": [
+    {
+      "id": "customer-360",
+      "score": 50,
+      "source_sha": "a1b2c3",
+      "totals": {
+        "checks": 2,
+        "errored": 0,
+        "fail": 1,
+        "pass": 1,
+        "skipped": 0,
+        "warn": 0
+      }
+    }
+  ],
+  "totals": {
+    "checks": 2,
+    "errored": 0,
+    "fail": 1,
+    "pass": 1,
+    "skipped": 0,
+    "warn": 0
+  }
+}

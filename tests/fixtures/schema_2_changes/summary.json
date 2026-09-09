@@ -1,0 +1,48 @@
+{
+  "changes": {
+    "count_deltas": {
+      "nodes": {
+        "after": 1251,
+        "before": 1250,
+        "delta": 1
+      },
+      "relationships": {
+        "after": 3478,
+        "before": 3480,
+        "delta": -2
+      }
+    },
+    "dropped": {
+      "fixed_checks": 0,
+      "new_failures": 0
+    },
+    "fixed_checks": [
+      {
+        "after": "pass",
+        "before": "fail",
+        "check_id": "customer-tax-id-fixed",
+        "suite_id": "customer-360"
+      }
+    ],
+    "new_failures": [
+      {
+        "after": "fail",
+        "before": "pass",
+        "check_id": "account-no-orphans",
+        "suite_id": "customer-360"
+      }
+    ],
+    "previous_run_id": "neo4j_20260901T000000000000Z_487f5709245effcd7237c32745230075"
+  },
+  "coverage_status": "complete",
+  "finished_at": "2026-09-02T00:00:00Z",
+  "id": "neo4j_20260902T000000000000Z_32f3a78d401f88741d82ce04e1097010",
+  "previous_run_id": "neo4j_20260901T000000000000Z_487f5709245effcd7237c32745230075",
+  "schema_version": "2.0",
+  "suite_scores": [
+    {
+      "id": "customer-360",
+      "score": 50
+    }
+  ]
+}

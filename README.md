@@ -94,6 +94,17 @@ schema 2.0 fields `run.run_status` in `results.json` and `coverage_status` in `s
 Action v1.0.2 and newer also retain compatibility with historical artifacts that use `run.status`
 and summary `status`.
 
+When `summary.json` contains a `changes` block, the Step Summary also shows **What changed**:
+new failures, fixed checks, and node/relationship count deltas from the previous run. Each check
+list shows at most 20 entries and reports how many were omitted. Older artifacts and first runs
+without the block retain the existing summary without a warning.
+
+The CLI must have access to a previous run in the same artifacts directory when it runs. Run it
+twice in one job, or restore trusted prior run artifacts before invoking the Action; the Action
+does not fetch another workflow's history automatically. Count deltas use the counts captured
+by each run, so an extra profile is unnecessary. Use `version: ''` with a source build until
+the CLI changes are released, and select the Action revision containing this renderer.
+
 Annotations, artifact uploads, and the Step Summary do not change GraphCheck verdicts or the final
 exit code.
 
